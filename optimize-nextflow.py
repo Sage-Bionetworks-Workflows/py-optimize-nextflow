@@ -12,7 +12,7 @@ from typing import Generic, TypeVar
 
 import typer
 
-MAX_RETRIES = 5
+MAX_RETRIES = 2
 
 Number = TypeVar("Number", int, float)
 
