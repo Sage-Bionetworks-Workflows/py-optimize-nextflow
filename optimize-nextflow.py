@@ -12,6 +12,8 @@ from typing import Generic, TypeVar
 
 import typer
 
+MAX_RETRIES = 5
+
 Number = TypeVar("Number", int, float)
 
 app = typer.Typer(
@@ -118,22 +120,24 @@ class ProcessMetrics:
         values_adj = [self.load_to_cores(x) for x in values]
         return Stats(*values_adj)
 
-    def optimize_mem(self) -> int:
+    def optimize_mem(self) -> list[int]:
         """Optimize memory allocation based on heuristics.
 
         Returns:
-            Optimized memory allocation.
+            List of progressively higher memory allocations.
+            The last value is assumed to be doubled with each
+            subsequent attempt.
         """
         if self.mem.max == 1 and self.mem_pct.max <= 80:
-            return self.mem_gb.max
+            return [self.mem_gb.max]
         elif self.mem_gb.max <= 8:
-            return self.mem_gb.max
+            return [self.mem_gb.max]
         elif self.mem_gb.max_q3_ratio <= 1.5 and self.mem_gb.max <= 32:
-            return self.mem_gb.max
+            return [self.mem_gb.max]
         elif self.mem_gb.max_q3_ratio <= 1.2 and self.mem_gb.max <= 64:
-            return self.mem_gb.max
+            return [self.mem_gb.max]
         else:
-            return self.mem_gb.q3
+            return [self.mem_gb.q3, self.mem_gb.max]
 
     def optimize_cpu(self) -> int:
         """Optimize CPU allocation based on heuristics.
@@ -216,17 +220,41 @@ class NextflowConfigGenerator:
         Returns:
             Serialized Nextflow configuration.
         """
-        prefix = "process { \n"
-        suffix = "\n }"
-
         process_configs = list()
         for process in self.process_metrics:
             process_config = self.generate_single(process)
             process_config_fmt = indent(process_config, "  ")
             process_configs.append(process_config_fmt)
         process_configs_concat = "".join(process_configs)
+        process_configs_concat = indent(process_configs_concat, " " * 8)
 
-        return prefix + process_configs_concat + suffix
+        full_config = f"""\
+        process {{
+        {process_configs_concat}
+        }}
+
+        def adj_mem(task, progression) {{
+            def n_attempts = task.attempt
+            if ( task.exitStatus ) {{
+                // Only increase memory if error was memory-related
+                def memory_exit_codes = [104, 134, 137, 139, 143, 247]
+                if ( memory_exit_codes.contains(task.exitStatus) ) {{
+                    n_attempts = task.attempt
+                }} else {{
+                    n_attempts = task.attempt - 1
+                }}
+            }}
+
+            if ( n_attempts <= progression.size() ) {{
+                return progression[n_attempts - 1]
+            }} else {{
+                diff = n_attempts - progression.size()
+                return progression.last() * Math.pow(2, diff)
+            }}
+        }}
+        """
+
+        return dedent(full_config)
 
     @staticmethod
     def generate_single(process_metrics: ProcessMetrics) -> str:
@@ -240,12 +268,21 @@ class NextflowConfigGenerator:
         """
         mem_optimal = process_metrics.optimize_mem()
         cpu_optimal = process_metrics.optimize_cpu()
+
+        mem_optimal_fmt = repr([f"{mem}.GB" for mem in mem_optimal])
+        mem_optimal_fmt = mem_optimal_fmt.replace("'", "")
+
         config = f"""
             withName: { process_metrics.name } {{
-                memory = { mem_optimal }.GB
-                cpu = { cpu_optimal }
+                maxErrors     = '-1'
+                maxRetries    = { MAX_RETRIES }
+                errorStrategy = {{ task.attempt <= { MAX_RETRIES } ? 'retry' : 'finish' }}
+
+                cpus   = { cpu_optimal }
+                memory = {{ adj_mem( task, { mem_optimal_fmt } ) }}
             }}
         """
+
         return dedent(config)
 
 
