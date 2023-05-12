@@ -228,6 +228,7 @@ class NextflowConfigGenerator:
         process_configs_concat = "".join(process_configs)
         process_configs_concat = indent(process_configs_concat, " " * 8)
 
+        # TODO: Switch to Jinja templating
         full_config = f"""\
         process {{
         {process_configs_concat}
