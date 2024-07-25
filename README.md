@@ -90,6 +90,8 @@ docker push ghcr.io/sage-bionetworks-workflows/py-optimize-nextflow:latest
 
 Developing Nextflow pipelines for scientific research and software engineering can be computationally intensive and expensive, especially when running on cloud platforms like AWS. However, there are several strategies you can employ to optimize costs without sacrificing performance.
 
+This article is also avaiable at <https://sagebionetworks.jira.com/wiki/spaces/WF/pages/3518496775/Controlling+Execution+Costs>.
+
 ### Utilize Spot Compute Instances
 
 Spot instances are a cost-effective solution for running Nextflow pipelines. These instances can be up to 90% cheaper than on-demand instances. However, there's a tradeoff: spot instances are typically reclaimed after 6-8 hours, which can interrupt long-running tasks. 
