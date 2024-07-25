@@ -3,6 +3,11 @@ Python script for optimizing resource allocations for Nextflow workflows based o
 metrics. This script has been packaged into a docker container so that it can be ran
 anywhere.
 
+When running the docker container detailed below you will be able to look at previous
+runs for your pipelines. It uses detailed information about how much memory and CPU was
+used during the execution of the run. Using this information you may determine if you 
+are over provisioning your processes.
+
 ### Running this container
 
 #### Export the following environment variables to be used by the container:
@@ -29,6 +34,42 @@ docker run --rm \
 -e WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID \
 ghcr.io/sage-bionetworks-workflows/py-optimize-nextflow:v1.0.0 sh -c \
 'tw --access-token $TOWER_ACCESS_TOKEN --url $TOWER_API_ENDPOINT --output "json" runs view -w $TOWER_PROJECT_NAME -i $WORKFLOW_RUN_ID metrics > metrics.json && python3 optimize-nextflow.py from-json metrics.json'
+```
+
+The output you will receive will look something like:
+
+```
+process {
+
+  withName: synapse_index {
+      maxErrors     = '-1'
+      maxRetries    = 2
+      errorStrategy = { task.attempt <= 2 ? 'retry' : 'finish' }
+
+      cpus   = 2
+      memory = { adj_mem( task, [1.GB] ) }
+  }
+}
+
+def adj_mem(task, progression) {
+    def n_attempts = task.attempt
+    if ( task.exitStatus ) {
+        // Only increase memory if error was memory-related
+        def memory_exit_codes = [104, 134, 137, 139, 143, 247]
+        if ( memory_exit_codes.contains(task.exitStatus) ) {
+            n_attempts = task.attempt
+        } else {
+            n_attempts = task.attempt - 1
+        }
+    }
+
+    if ( n_attempts <= progression.size() ) {
+        return progression[n_attempts - 1]
+    } else {
+        diff = n_attempts - progression.size()
+        return progression.last() * Math.pow(2, diff)
+    }
+}
 ```
 
 # Developers
