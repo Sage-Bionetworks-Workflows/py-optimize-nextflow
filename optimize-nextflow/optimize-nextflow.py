@@ -29,7 +29,7 @@ def from_json(metrics_path: Path):
 
         tw --output "json" runs view -w "<org>/<workspace>" -i "<workflow-id>" metrics
     """
-    json_parser = MetricsJsonParser(metrics_path)
+    json_parser = MetricsJsonParser(json_path=metrics_path)
     process_metrics = json_parser.parse()
     config_generator = NextflowConfigGenerator(process_metrics)
     config = config_generator.generate()
@@ -172,7 +172,8 @@ class MetricsJsonParser:
         Returns:
             List of Tower process metrics.
         """
-        mem_metrics = self.parse_resource("metricsMemory", "memRaw", "memUsage")
+        mem_metrics = self.parse_resource(
+            "metricsMemory", "memRaw", "memUsage")
         cpu_metrics = self.parse_resource("metricsCpu", "cpuRaw", "cpuUsage")
         processes = set(mem_metrics) & set(cpu_metrics)
 
