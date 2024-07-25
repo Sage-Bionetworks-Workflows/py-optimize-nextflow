@@ -121,6 +121,46 @@ environment if you are able.
 
 ![compute-environment](./compute-environment.png)
 
+#### Override the compute environment
+If no process queue is defined for a task it will use the default that is applied to
+the pipeline. However, there are some cases where you might want to do the following:
+
+1) Run most tasks in a spot instance
+2) Run a few long running, or otherwise "mission" critical tasks in an on-demand instance.
+3) Or the opposite where the default is an on-demand instance, or some tasks are spot
+
+This can be accomplished by defining a `queue` attribute in the `.config` file.
+
+
+In the following example I am setting a specific process to use a queue that I've 
+manually defined. For those processes that don't have a queue manually defined it will
+use the default queue defined for that pipeline.
+
+```
+process {
+  withName: my_task_name {
+      queue = 'TowerForge-queue-id'
+
+      maxErrors     = '-1'
+      maxRetries    = 3
+      errorStrategy = { task.attempt <= 3 ? 'retry' : 'finish' }
+
+      cpus   = 2
+      memory = 1.GB
+  }
+}
+```
+
+The `queue` in this case comes from the Tower UI. First navigate to the workspace in
+question and go to the `Compute Environments` tab. Select the environment in question.
+
+![find-queue-id-1](./find-queue-id-1.png)
+
+Scroll down until you find the ID for `Compute queue`. This is that ID you'll use.
+
+![find-queue-id-2](./find-queue-id-2.png)
+
+
 #### Launching a workflow through the py-orca project
 <https://github.com/Sage-Bionetworks-Workflows/py-orca> is a python package for 
 connecting services and building data pipelines orchestrated through Apache Airflow. 
