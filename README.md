@@ -98,30 +98,7 @@ Spot instances are a cost-effective solution for running Nextflow pipelines. The
 
 **Best Practice:** Use spot instances for short and intermediate steps within your workflow. If a step in your workflow exceeds the typical spot instance duration (6-8 hours), it's better to use on-demand instances for that step. This ensures that you won't lose progress and incur additional costs from having to rerun long tasks.
 
-### Optimize Memory and CPU Allocation
-
-Properly allocating memory and CPU resources is essential for cost optimization. Over-provisioning resources can lead to unnecessary expenses, while under-provisioning can result in slower performance and potential failures.
-
-**Best Practice:** Review the documentation for your specific workflow to determine the initial recommendations for memory and CPU allocation. Adjust these settings based on the workflow's requirements and monitor the performance to make further adjustments if necessary.
-
-### Utilize the "optimize-nextflow" Project
-
-After running your workflow, leverage the "optimize-nextflow" project to analyze your runs. This tool provides suggestions for the appropriate CPU and memory settings for future runs, helping you to fine-tune your resource allocation.
-
-**Best Practice:** Regularly use "optimize-nextflow" to review your workflow runs. Implement the suggested optimizations to ensure you are using resources efficiently, which can lead to significant cost savings over time.
-
-## How-to
-
-### Set your compute environment to spot
-
-#### Creating the pipeline through the UI
-When you are creating a new pipeline for your project through the web UI you have an
-option to set the Compute environment. Consider setting it to the `spot`
-environment if you are able.
-
-![compute-environment](./compute-environment.png)
-
-#### Override the compute environment
+##### Override the compute environment on a per-step basis
 If no process queue is defined for a task it will use the default that is applied to
 the pipeline. However, there are some cases where you might want to do the following:
 
@@ -160,17 +137,30 @@ Scroll down until you find the ID for `Compute queue`. This is that ID you'll us
 
 ![find-queue-id-2](./find-queue-id-2.png)
 
+<br>
 
-#### Launching a workflow through the py-orca project
-<https://github.com/Sage-Bionetworks-Workflows/py-orca> is a python package for 
-connecting services and building data pipelines orchestrated through Apache Airflow. 
+##### Setting the compute environment on pipeline creation
+When you are creating a new pipeline for your project through the web UI you have an
+option to set the Compute environment. Consider setting it to the `spot`
+environment if you are able.
 
-<https://github.com/Sage-Bionetworks-Workflows/orca-recipes/blob/main/dags/nf-hello-test.py>
-contains an example of creating an Airflow DAG that kicks off a nextflow workflow.
-You'll see that `"tower_compute_env_type": Param("spot", type="string")` in this script
-is set to `spot`.
+![compute-environment](./compute-environment.png)
 
-### Adjust memory on memory related failures
+<br>
+
+### Optimize Memory and CPU Allocation
+
+Properly allocating memory and CPU resources is essential for cost optimization. Over-provisioning resources can lead to unnecessary expenses, while under-provisioning can result in slower performance and potential failures.
+
+**Best Practice:** Review the documentation for your specific workflow to determine the initial recommendations for memory and CPU allocation. Adjust these settings based on the workflow's requirements and monitor the performance to make further adjustments if necessary.
+
+#### Utilize the "optimize-nextflow" Project
+
+After running your workflow, leverage the "optimize-nextflow" project to analyze your runs. This tool provides suggestions for the appropriate CPU and memory settings for future runs, helping you to fine-tune your resource allocation.
+
+**Best Practice:** Regularly use "optimize-nextflow" to review your workflow runs. Implement the suggested optimizations to ensure you are using resources efficiently, which can lead to significant cost savings over time.
+
+### How-to adjust memory on memory related failures
 If you have nextflow processes that have wildly different memory requirements you may
 kick off a pipeline that is destined to fail. Use the following within your
 `.config` file to automatically retry the task and adjust the memory on each failure:
