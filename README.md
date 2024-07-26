@@ -139,6 +139,27 @@ Scroll down until you find the ID for `Compute queue`. This is that ID you'll us
 
 <br>
 
+##### Additional example:
+
+The `maxSubmitAwait` directives allows you to specify how long a task can remain in submission queue without being executed. Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or resource requirement. For example:
+
+```
+process foo {
+  errorStrategy 'retry'
+  maxSubmitAwait '10 mins'
+  maxRetries 3
+  queue "${task.submitAttempt==1 : 'TowerForge-queue-id-spot' : 'TowerForge-queue-id-on-demand'}"
+  script:
+  '''
+  your_job --here
+  '''
+}
+```
+
+<br>
+
 ##### Setting the compute environment on pipeline creation
 When you are creating a new pipeline for your project through the web UI you have an
 option to set the Compute environment. Consider setting it to the `spot`
