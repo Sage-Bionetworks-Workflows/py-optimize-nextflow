@@ -94,9 +94,9 @@ This article is also avaiable at <https://sagebionetworks.jira.com/wiki/spaces/W
 
 ### Utilize Spot Compute Instances
 
-Spot instances are a cost-effective solution for running Nextflow pipelines. These instances can be up to 90% cheaper than on-demand instances. However, there's a tradeoff: spot instances are typically reclaimed after 6-8 hours, which can interrupt long-running tasks. 
+Spot instances are a cost-effective solution for running Nextflow pipelines. These instances can be up to 90% cheaper than on-demand instances. However, there's a trade off: spot instances are typically reclaimed after a short duration, which can interrupt long-running tasks. AWS recommends spot instances for jobs that are 30 minutes or less.
 
-**Best Practice:** Use spot instances for short and intermediate steps within your workflow. If a step in your workflow exceeds the typical spot instance duration (6-8 hours), it's better to use on-demand instances for that step. This ensures that you won't lose progress and incur additional costs from having to rerun long tasks.
+**Best Practice:** Use spot instances for short and intermediate steps within your workflow. If a step in your workflow is over 30 minutes, it's better to use on-demand instances for that step. This ensures that you won't lose progress and incur additional costs from having to rerun long tasks. You can always try Spot instances first and switch to On-Demand if necessary.
 
 ##### Override the compute environment on a per-step basis
 If no process queue is defined for a task it will use the default that is applied to
@@ -106,7 +106,7 @@ the pipeline. However, there are some cases where you might want to do the follo
 2) Run a few long running, or otherwise "mission" critical tasks in an on-demand instance.
 3) Or the opposite where the default is an on-demand instance, or some tasks are spot
 
-This can be accomplished by defining a `queue` attribute in the `.config` file.
+This can be accomplished by defining a `queue` directive in the `.config` file.
 
 
 In the following example I am setting a specific process to use a queue that I've 
@@ -116,6 +116,24 @@ use the default queue defined for that pipeline.
 ```
 process {
   withName: my_task_name {
+      queue = 'TowerForge-queue-id'
+
+      maxErrors     = '-1'
+      maxRetries    = 3
+      errorStrategy = { task.attempt <= 3 ? 'retry' : 'finish' }
+
+      cpus   = 2
+      memory = 1.GB
+  }
+}
+```
+
+You may also use labels to control this configuration like:
+
+
+```
+process {
+  withLabel: my_label_name {
       queue = 'TowerForge-queue-id'
 
       maxErrors     = '-1'
@@ -141,9 +159,9 @@ Scroll down until you find the ID for `Compute queue`. This is that ID you'll us
 
 ##### Additional example:
 
-The `maxSubmitAwait` directives allows you to specify how long a task can remain in submission queue without being executed. Elapsed this time the task execution will fail.
+The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed. After the elapsed time the task execution will fail.
 
-When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or resource requirement. For example:
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a different queue or resource requirement. For example:
 
 ```
 process foo {
@@ -177,7 +195,7 @@ Properly allocating memory and CPU resources is essential for cost optimization.
 
 #### Utilize the "optimize-nextflow" Project
 
-After running your workflow, leverage the "optimize-nextflow" project to analyze your runs. This tool provides suggestions for the appropriate CPU and memory settings for future runs, helping you to fine-tune your resource allocation.
+After running your workflow, leverage the "optimize-nextflow" project to analyze your runs. This tool provides suggestions for the appropriate CPU and memory settings for future runs, helping fine-tune resource allocation.
 
 **Best Practice:** Regularly use "optimize-nextflow" to review your workflow runs. Implement the suggested optimizations to ensure you are using resources efficiently, which can lead to significant cost savings over time.
 
@@ -189,6 +207,15 @@ kick off a pipeline that is destined to fail. Use the following within your
 ```
 process {
   withName: my_task_name {
+      maxErrors     = '-1'
+      maxRetries    = 3
+      errorStrategy = { task.attempt <= 3 ? 'retry' : 'finish' }
+
+      cpus   = 2
+      memory = { adj_mem( task, [2.GB] ) }
+  }
+  
+  withLabel: my_label_name {
       maxErrors     = '-1'
       maxRetries    = 3
       errorStrategy = { task.attempt <= 3 ? 'retry' : 'finish' }
